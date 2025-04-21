@@ -1,0 +1,42 @@
+use console::Term;
+use rayon::prelude::*;
+
+use crate::{progress::STYLE_PROGRESS, traits::Extractor};
+
+use super::schema::WiktionaryEntry;
+
+pub struct WiktionaryExtractor {}
+
+impl WiktionaryExtractor {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Extractor<WiktionaryEntry> for WiktionaryExtractor {
+    fn extract(&self, term: &Term, data: &str) -> anyhow::Result<Vec<WiktionaryEntry>> {
+        term.write_line("🔍 Extracting the dictionary...")?;
+
+        let progress = indicatif::ProgressBar::new(data.lines().count() as u64);
+
+        progress.set_style(STYLE_PROGRESS.clone());
+
+        let result: Result<Vec<_>, _> = data
+            .lines()
+            .enumerate()
+            .par_bridge()
+            .map(|(i, l)| {
+                progress.inc(1);
+                serde_json::from_str(l)
+                    .map_err(|e| anyhow::anyhow!("Failed to parse line {}: {} - {}", i + 1, e, l))
+            })
+            .collect();
+
+        progress.finish_and_clear();
+
+        term.clear_last_lines(1)?;
+        term.write_line("✅ Extraction complete")?;
+
+        Ok(result?)
+    }
+}
