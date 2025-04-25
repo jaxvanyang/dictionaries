@@ -1,27 +1,25 @@
 use console::Term;
 use rayon::prelude::*;
 
-use crate::{progress::STYLE_PROGRESS, traits::Extractor};
+use crate::{processors::traits::Extractor, progress::STYLE_PROGRESS};
 
 use super::schema::WiktionaryEntry;
 
 pub struct WiktionaryExtractor {}
 
-impl WiktionaryExtractor {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
+impl Extractor for WiktionaryExtractor {
+    type Entry = WiktionaryEntry;
 
-impl Extractor<WiktionaryEntry> for WiktionaryExtractor {
-    fn extract(&self, term: &Term, data: &str) -> anyhow::Result<Vec<WiktionaryEntry>> {
+    fn extract(&self, term: &Term, data: &Vec<u8>) -> anyhow::Result<Vec<WiktionaryEntry>> {
         term.write_line("🔍 Extracting the dictionary...")?;
 
-        let progress = indicatif::ProgressBar::new(data.lines().count() as u64);
+        let text = String::from_utf8_lossy(data);
+
+        let progress = indicatif::ProgressBar::new(text.lines().count() as u64);
 
         progress.set_style(STYLE_PROGRESS.clone());
 
-        let result: Result<Vec<_>, _> = data
+        let result: Result<Vec<_>, _> = text
             .lines()
             .enumerate()
             .par_bridge()
@@ -38,5 +36,12 @@ impl Extractor<WiktionaryEntry> for WiktionaryExtractor {
         term.write_line("✅ Extraction complete")?;
 
         Ok(result?)
+    }
+
+    fn new() -> anyhow::Result<Self>
+    where
+        Self: Sized,
+    {
+        Ok(Self {})
     }
 }

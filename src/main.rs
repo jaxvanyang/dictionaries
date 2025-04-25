@@ -1,15 +1,16 @@
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand, command};
+use self::commands::Commands;
+use clap::{Parser, command};
 use console::Term;
-use traits::{Converter, Downloader, Extractor};
+use processors::{CEDictProcessor, Processor, WiktionaryProcessor};
 use utils::save_dictionary;
-use wiktionary::{WiktionaryArgs, WiktionaryConverter, WiktionaryDownloader, WiktionaryExtractor};
 
+mod args;
+mod commands;
+mod processors;
 mod progress;
-mod traits;
 mod utils;
-mod wiktionary;
 
 #[derive(Debug, Parser)]
 #[command(name = "odict-convert")]
@@ -22,36 +23,28 @@ struct Cli {
     output: Option<String>,
 }
 
-#[derive(Debug, Subcommand)]
-enum Commands {
-    #[command(arg_required_else_help = true)]
-    Wiktionary(WiktionaryArgs),
-}
-
 #[tokio::main]
 async fn main() {
     let args = Cli::parse();
+    let term = Term::stdout();
+
+    let dictionary = match &args.command {
+        Commands::Wiktionary(wiktionary_args) => WiktionaryProcessor::new()
+            .unwrap()
+            .process(&term, Some(wiktionary_args.language.clone()))
+            .await
+            .unwrap(),
+        Commands::CEDict => CEDictProcessor::new()
+            .unwrap()
+            .process(&term, None)
+            .await
+            .unwrap(),
+    };
 
     let (command_name, language) = match &args.command {
         Commands::Wiktionary(wiktionary_args) => ("wiktionary", wiktionary_args.language.clone()),
+        Commands::CEDict => ("cedict", "zho-eng".to_string()),
     };
-
-    let downloader = match args.command {
-        Commands::Wiktionary(args) => WiktionaryDownloader::new(args.language),
-    };
-
-    let extractor = match args.command {
-        Commands::Wiktionary(_) => WiktionaryExtractor::new(),
-    };
-
-    let mut converter = match args.command {
-        Commands::Wiktionary(_) => WiktionaryConverter::new(),
-    };
-
-    let term = Term::stdout();
-    let text = downloader.download(&term).await.unwrap();
-    let parsed = extractor.extract(&term, &text).unwrap();
-    let dictionary = converter.convert(&term, &parsed).unwrap();
 
     let output_path: PathBuf = match &args.output {
         Some(path) => path.clone().into(),
