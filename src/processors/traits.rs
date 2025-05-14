@@ -56,7 +56,14 @@ pub trait Downloader {
 
         let total_size = response.content_length().unwrap_or(0);
 
-        term.write_line(format!("⬇️ Downloading the dictionary from {}...", url).as_str())?;
+        term.write_line(
+            format!(
+                "⬇️ Downloading the dictionary from {} to {}...",
+                url,
+                file_path.display()
+            )
+            .as_str(),
+        )?;
 
         let pb = indicatif::ProgressBar::new(total_size);
 
