@@ -9,6 +9,7 @@ use odict::{
 };
 
 use super::{
+    SUPPORTED_LANGUAGES,
     consts::POS_MAP,
     schema::{Sound, WiktionaryEntry},
 };
@@ -90,6 +91,7 @@ impl Converter for WiktionaryConverter {
         term: &Term,
         frequency_map: &Option<FrequencyMap>,
         data: &Vec<WiktionaryEntry>,
+        language: Option<String>,
     ) -> anyhow::Result<Dictionary> {
         term.write_line("🔄 Converting the dictionary...")?;
 
@@ -236,8 +238,8 @@ impl Converter for WiktionaryConverter {
 
         Ok(Dictionary {
             id: ID::new(),
-            name: None,
             entries: entries.values().cloned().collect(),
+            name: language.map(|lang| format!("{} Wiktionary", SUPPORTED_LANGUAGES[lang.as_str()])),
         })
     }
 

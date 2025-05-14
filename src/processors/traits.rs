@@ -74,6 +74,7 @@ pub trait Converter {
         term: &Term,
         frequency_map: &Option<FrequencyMap>,
         data: &Vec<Self::Entry>,
+        language: Option<String>,
     ) -> anyhow::Result<Dictionary>;
 }
 
@@ -93,14 +94,14 @@ pub trait Processor {
         let extractor = Self::Extractor::new()?;
         let mut converter = Self::Converter::new()?;
 
-        let frequency_map = match language {
-            Some(lang) => FrequencyMap::new(&lang, term).await?,
+        let frequency_map = match &language {
+            Some(lang) => FrequencyMap::new(lang, term).await?,
             None => None,
         };
 
         let data = downloader.download(term).await?;
         let parsed = extractor.extract(term, &data)?;
-        let dictionary = converter.convert(term, &frequency_map, &parsed)?;
+        let dictionary = converter.convert(term, &frequency_map, &parsed, language)?;
 
         Ok(dictionary)
     }

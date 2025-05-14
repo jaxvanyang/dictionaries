@@ -21,6 +21,7 @@ impl Converter for CEDictConverter {
         term: &Term,
         frequency_map: &Option<FrequencyMap>,
         data: &Vec<CEDictEntry>,
+        _language: Option<String>,
     ) -> anyhow::Result<Dictionary> {
         term.write_line("🔄 Converting the dictionary...")?;
 
