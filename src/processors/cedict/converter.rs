@@ -13,7 +13,12 @@ pub struct CEDictConverter {}
 impl Converter for CEDictConverter {
     type Entry = CEDictEntry;
 
-    fn convert(&mut self, term: &Term, data: &Vec<CEDictEntry>) -> anyhow::Result<Dictionary> {
+    fn convert(
+        &mut self,
+        term: &Term,
+        data: &Vec<CEDictEntry>,
+        _language: Option<String>,
+    ) -> anyhow::Result<Dictionary> {
         term.write_line("🔄 Converting the dictionary...")?;
 
         let progress = indicatif::ProgressBar::new(data.len() as u64);

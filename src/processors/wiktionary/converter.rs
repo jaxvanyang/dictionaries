@@ -8,7 +8,7 @@ use odict::{
     PartOfSpeech, Sense,
 };
 
-use super::{consts::POS_MAP, schema::WiktionaryEntry};
+use super::{SUPPORTED_LANGUAGES, consts::POS_MAP, schema::WiktionaryEntry};
 
 pub struct WiktionaryConverter {
     missing_pos: Vec<String>,
@@ -37,7 +37,12 @@ impl WiktionaryConverter {
 impl Converter for WiktionaryConverter {
     type Entry = WiktionaryEntry;
 
-    fn convert(&mut self, term: &Term, data: &Vec<WiktionaryEntry>) -> anyhow::Result<Dictionary> {
+    fn convert(
+        &mut self,
+        term: &Term,
+        data: &Vec<WiktionaryEntry>,
+        language: Option<String>,
+    ) -> anyhow::Result<Dictionary> {
         term.write_line("🔄 Converting the dictionary...")?;
 
         self.missing_pos = vec![];
@@ -158,7 +163,7 @@ impl Converter for WiktionaryConverter {
 
         Ok(Dictionary {
             id: ID::new(),
-            name: None,
+            name: language.map(|lang| format!("{} Wiktionary", SUPPORTED_LANGUAGES[lang.as_str()])),
             entries,
         })
     }
