@@ -5,7 +5,7 @@ use console::Term;
 use map_macro::hash_map;
 use odict::{
     Definition, DefinitionType, Dictionary, Entry, EntryRef, Etymology, Form, Group, ID,
-    PartOfSpeech, Sense,
+    PartOfSpeech, Sense, Translation,
 };
 
 use super::{SUPPORTED_LANGUAGES, consts::POS_MAP, schema::WiktionaryEntry};
@@ -64,13 +64,24 @@ impl Converter for WiktionaryConverter {
                 .map(|form| Form {
                     term: form.form.to_owned().into(),
                     kind: None,
+                    tags: form.tags.clone(),
                 })
                 .collect::<Vec<_>>();
+            let translations = entry
+                .translations
+                .iter()
+                .map(|t| Translation {
+                    lang: t.lang.clone(),
+                    value: t.word.clone().unwrap_or_default(),
+                })
+                .collect();
 
             let mut definitions: Vec<DefinitionType> = vec![];
             let mut group_map: HashMap<String, usize> = hash_map! {};
+            let mut tags: Vec<String> = Vec::new();
 
             for sense in &entry.senses {
+                tags.extend(sense.tags.clone());
                 // Glosses with 2 senses typically have subdefinitions
                 if sense.glosses.len() == 2 {
                     let parent = sense.glosses[0].to_owned();
@@ -116,6 +127,10 @@ impl Converter for WiktionaryConverter {
             let sense = Sense {
                 pos: pos.to_owned(),
                 definitions: definitions.to_owned(),
+                lemma: None,
+                tags,
+                translations,
+                forms,
             };
 
             if let Some(ety) = entries
@@ -130,7 +145,7 @@ impl Converter for WiktionaryConverter {
             } else {
                 let ety = Etymology {
                     id: None,
-                    pronunciation: None,
+                    pronunciations: Vec::new(),
                     description: etymology_text.to_owned(),
                     senses: hash_map! {
                         pos.to_owned() => sense,
@@ -141,11 +156,11 @@ impl Converter for WiktionaryConverter {
                     entry.etymologies.push(ety);
                 } else {
                     let entry = Entry {
-                        etymologies: vec![ety],
                         term: term.to_owned(),
-                        forms,
-                        lemma: None,
+                        rank: None,
                         see_also: see_also.map(|s| EntryRef::from(s)),
+                        etymologies: vec![ety],
+                        media: Vec::new(),
                     };
 
                     entries.insert(term.to_owned(), entry);
