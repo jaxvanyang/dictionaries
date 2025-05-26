@@ -4,11 +4,14 @@ use crate::{frequency::FrequencyMap, processors::traits::Converter, progress::ST
 use console::Term;
 use map_macro::{hash_map, hash_set};
 use odict::{
-    Definition, DefinitionType, Dictionary, Entry, EntryRef, Etymology, Form, Group, ID,
-    PartOfSpeech, Sense,
+    Definition, DefinitionType, Dictionary, Entry, EntryRef, Etymology, Form, Group, ID, MediaURL,
+    PartOfSpeech, Pronunciation, PronunciationKind, Sense,
 };
 
-use super::{consts::POS_MAP, schema::WiktionaryEntry};
+use super::{
+    consts::POS_MAP,
+    schema::{Sound, WiktionaryEntry},
+};
 
 pub struct WiktionaryConverter {
     missing_pos: Vec<String>,
@@ -16,21 +19,66 @@ pub struct WiktionaryConverter {
 
 impl WiktionaryConverter {
     fn resolve_pos<'a>(&mut self, entry: &WiktionaryEntry) -> PartOfSpeech {
-        let mut pos = PartOfSpeech::Un;
-
-        if let Some(resolved_pos) = entry
-            .pos
-            .as_ref()
-            .and_then(|p| POS_MAP.get(p.as_str()).cloned())
-        {
-            pos = resolved_pos;
-        } else if let Some(pos_value) = &entry.pos {
-            if !self.missing_pos.contains(pos_value) {
-                self.missing_pos.push(pos_value.clone());
+        if let Some(pos_value) = &entry.pos {
+            // Try to get the mapped PartOfSpeech from POS_MAP
+            if let Some(resolved_pos) = POS_MAP.get(pos_value.as_str()).cloned() {
+                return resolved_pos;
+            } else {
+                // If not found in the map, use PartOfSpeech::Other with the original value
+                if !self.missing_pos.contains(pos_value) {
+                    self.missing_pos.push(pos_value.clone());
+                }
+                return PartOfSpeech::Other(pos_value.clone());
             }
         }
 
-        pos
+        // Default to Unknown if no POS is provided
+        PartOfSpeech::Un
+    }
+}
+
+impl Into<Option<Pronunciation>> for &Sound {
+    fn into(self) -> Option<Pronunciation> {
+        // Only support Pinyin and IPA right now
+        if self.ipa.is_none() && self.zh_pron.is_none() {
+            return None;
+        }
+
+        let media = vec![&self.mp3_url, &self.ogg_url]
+            .into_iter()
+            .filter_map(|u| u.to_owned())
+            .map(|url| MediaURL {
+                src: url.clone(),
+                mime_type: if url.ends_with(".ogg") {
+                    Some("audio/ogg".to_string())
+                } else if url.ends_with(".mp3") {
+                    Some("audio/mp3".to_string())
+                } else {
+                    None
+                },
+                ..MediaURL::default()
+            })
+            .collect::<Vec<MediaURL>>();
+
+        if let Some(ipa) = &self.ipa {
+            return Pronunciation {
+                kind: Some(PronunciationKind::IPA),
+                value: ipa.to_owned(),
+                media,
+            }
+            .into();
+        } else if let Some(zh_pron) = &self.zh_pron {
+            if self.tags.contains(&"Pinyin".to_string()) {
+                return Pronunciation {
+                    kind: Some(PronunciationKind::Pinyin),
+                    value: zh_pron.to_owned(),
+                    media,
+                }
+                .into();
+            }
+        }
+
+        None
     }
 }
 
@@ -58,6 +106,12 @@ impl Converter for WiktionaryConverter {
             let term = entry.word.to_owned();
             let see_also = entry.redirects.as_ref().map(|r| r[0].to_owned());
             let etymology_text = entry.etymology_text.to_owned();
+            let pronunciations = entry
+                .sounds
+                .iter()
+                .map(|s| s.to_owned())
+                .filter_map(|s| s.into())
+                .collect::<Vec<odict::Pronunciation>>();
 
             let mut definitions: Vec<DefinitionType> = vec![];
             let mut group_map: HashMap<String, usize> = hash_map! {};
@@ -149,7 +203,7 @@ impl Converter for WiktionaryConverter {
             } else {
                 let ety = Etymology {
                     id: None,
-                    pronunciations: vec![],
+                    pronunciations,
                     description: etymology_text.to_owned(),
                     senses: hash_set![sense],
                 };

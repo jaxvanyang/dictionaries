@@ -21,27 +21,42 @@ pub const SUPPORTED_LANGUAGES: LazyLock<HashMap<&str, &str>> = LazyLock::new(|| 
 
 pub const POS_MAP: LazyLock<HashMap<&str, PartOfSpeech>> = LazyLock::new(|| {
     hash_map! {
-      "abbrev" => PartOfSpeech::Abv,
-      "adv_phrase" => PartOfSpeech::PhrAdj,
-      "affix" => PartOfSpeech::Aff,
-      "article" => PartOfSpeech::Art,
-      "character" => PartOfSpeech::Chr,
-      "circumpos" => PartOfSpeech::Un,  // TODO: fix this? ger
-      "combining_form" => PartOfSpeech::Un,  // TODO: fix this? eng
-      "romanization" => PartOfSpeech::Un,  // TODO: fix this? jap
-      "contraction" => PartOfSpeech::Contr,
-      "circumfix" => PartOfSpeech::Cf,
-      "infix" => PartOfSpeech::Inf,
-      "interfix" => PartOfSpeech::Intf,
-      "noun" => PartOfSpeech::N,
-      "particle" => PartOfSpeech::Part,
-      "phrase" => PartOfSpeech::Phr,
-      "prefix" => PartOfSpeech::Pref,
-      "prep_phrase" => PartOfSpeech::PhrPrep,
-      "proverb" => PartOfSpeech::Prov,
-      "punct" => PartOfSpeech::Punc,
-      "suffix" => PartOfSpeech::Suff,
-      "symbol" => PartOfSpeech::Sym,
-      "verb" => PartOfSpeech::V
+        // Core parts of speech
+        "adj" => PartOfSpeech::Adj,
+        "adv" => PartOfSpeech::Adv,
+        "noun" => PartOfSpeech::N,
+        "verb" => PartOfSpeech::V,
+        "pron" => PartOfSpeech::Pron,
+        "conj" => PartOfSpeech::Conj,
+        "prep" => PartOfSpeech::Prep,
+        "intj" => PartOfSpeech::Intj,
+        "det" => PartOfSpeech::Det,
+        "num" => PartOfSpeech::Num,
+        "name" => PartOfSpeech::Propn,
+
+        // Abbreviations and contractions
+        "abbrev" => PartOfSpeech::Abv,
+        "contraction" => PartOfSpeech::Contr,
+
+        // Affixes and morphemes
+        "affix" => PartOfSpeech::Aff,
+        "prefix" => PartOfSpeech::Pref,
+        "suffix" => PartOfSpeech::Suff,
+        "infix" => PartOfSpeech::Inf,
+        "interfix" => PartOfSpeech::Intf,
+        "circumfix" => PartOfSpeech::Cf,
+
+        // Phrases
+        "phrase" => PartOfSpeech::Phr,
+        "adv_phrase" => PartOfSpeech::PhrAdj,
+        "prep_phrase" => PartOfSpeech::PhrPrep,
+
+        // Special characters and symbols
+        "article" => PartOfSpeech::Art,
+        "character" => PartOfSpeech::Chr,
+        "punct" => PartOfSpeech::Punc,
+        "symbol" => PartOfSpeech::Sym,
+        "proverb" => PartOfSpeech::Prov,
+        "particle" => PartOfSpeech::Part
     }
 });

@@ -214,6 +214,8 @@ pub struct Sound {
     /// Rhymes information
     #[serde(default)]
     pub rhymes: Option<String>,
+    #[serde(default, rename = "zh-pron")]
+    pub zh_pron: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
