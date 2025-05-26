@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{processors::traits::Converter, progress::STYLE_PROGRESS};
+use crate::{frequency::FrequencyMap, processors::traits::Converter, progress::STYLE_PROGRESS};
 use console::Term;
-use map_macro::hash_map;
+use map_macro::{hash_map, hash_set};
 use odict::{
     Definition, DefinitionType, Dictionary, Entry, EntryRef, Etymology, Form, Group, ID,
     PartOfSpeech, Sense,
@@ -16,7 +16,7 @@ pub struct WiktionaryConverter {
 
 impl WiktionaryConverter {
     fn resolve_pos<'a>(&mut self, entry: &WiktionaryEntry) -> PartOfSpeech {
-        let mut pos = PartOfSpeech::un;
+        let mut pos = PartOfSpeech::Un;
 
         if let Some(resolved_pos) = entry
             .pos
@@ -37,7 +37,12 @@ impl WiktionaryConverter {
 impl Converter for WiktionaryConverter {
     type Entry = WiktionaryEntry;
 
-    fn convert(&mut self, term: &Term, data: &Vec<WiktionaryEntry>) -> anyhow::Result<Dictionary> {
+    fn convert(
+        &mut self,
+        term: &Term,
+        frequency_map: &Option<FrequencyMap>,
+        data: &Vec<WiktionaryEntry>,
+    ) -> anyhow::Result<Dictionary> {
         term.write_line("🔄 Converting the dictionary...")?;
 
         self.missing_pos = vec![];
@@ -53,19 +58,22 @@ impl Converter for WiktionaryConverter {
             let term = entry.word.to_owned();
             let see_also = entry.redirects.as_ref().map(|r| r[0].to_owned());
             let etymology_text = entry.etymology_text.to_owned();
-            let forms = entry
-                .forms
-                .iter()
-                .map(|form| Form {
-                    term: form.form.to_owned().into(),
-                    kind: None,
-                })
-                .collect::<Vec<_>>();
 
             let mut definitions: Vec<DefinitionType> = vec![];
             let mut group_map: HashMap<String, usize> = hash_map! {};
 
+            let mut lemma: Option<EntryRef> = None;
+            let mut tags: Vec<String> = vec![];
+
             for sense in &entry.senses {
+                tags.extend(sense.tags.iter().cloned());
+
+                if sense.form_of.len() > 0 {
+                    if let Some(fo) = &sense.form_of.get(0) {
+                        lemma = Some(EntryRef::from(fo.word.to_owned()));
+                    }
+                }
+
                 // Glosses with 2 senses typically have subdefinitions
                 if sense.glosses.len() == 2 {
                     let parent = sense.glosses[0].to_owned();
@@ -108,42 +116,56 @@ impl Converter for WiktionaryConverter {
 
             let etymology_number = entry.etymology_number.unwrap_or(1);
 
+            let forms = entry
+                .forms
+                .iter()
+                .map(|f| Form {
+                    kind: None,
+                    term: EntryRef::from(f.form.to_owned()),
+                    tags: f.tags.to_owned(),
+                })
+                .collect();
+
             let sense = Sense {
                 pos: pos.to_owned(),
+                lemma: lemma.to_owned(),
+                tags,
+                translations: vec![],
+                forms,
                 definitions: definitions.to_owned(),
             };
 
             if let Some(ety) = entries
-                .get_mut(&term)
+                .get_mut(term.as_str())
                 .and_then(|e| e.etymologies.get_mut(etymology_number as usize - 1))
             {
-                if let Some(sense) = ety.senses.get_mut(&pos) {
-                    sense.definitions.append(&mut definitions);
+                if let Some(sense) = ety.senses.get(&pos) {
+                    let mut new_sense = sense.clone();
+                    new_sense.definitions.append(&mut definitions);
+                    ety.senses.replace(new_sense);
                 } else {
-                    ety.senses.insert(pos, sense);
+                    ety.senses.insert(sense);
                 }
             } else {
                 let ety = Etymology {
                     id: None,
-                    pronunciation: None,
+                    pronunciations: vec![],
                     description: etymology_text.to_owned(),
-                    senses: hash_map! {
-                        pos.to_owned() => sense,
-                    },
+                    senses: hash_set![sense],
                 };
 
-                if let Some(entry) = entries.get_mut(&term) {
+                if let Some(entry) = entries.get_mut(term.as_str()) {
                     entry.etymologies.push(ety);
                 } else {
                     let entry = Entry {
                         etymologies: vec![ety],
                         term: term.to_owned(),
-                        forms,
-                        lemma: None,
+                        rank: frequency_map.as_ref().and_then(|m| m.get_frequency(&term)),
+                        media: vec![],
                         see_also: see_also.map(|s| EntryRef::from(s)),
                     };
 
-                    entries.insert(term.to_owned(), entry);
+                    entries.insert(term.clone(), entry);
                 }
             }
 
@@ -159,7 +181,7 @@ impl Converter for WiktionaryConverter {
         Ok(Dictionary {
             id: ID::new(),
             name: None,
-            entries,
+            entries: entries.values().cloned().collect(),
         })
     }
 
