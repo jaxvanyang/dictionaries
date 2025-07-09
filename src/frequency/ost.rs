@@ -24,7 +24,13 @@ pub async fn get_subtitle_frequencies(
         language_code
     );
 
-    let file_path = PathBuf::from(".data").join(&hash_url(&url));
+    let data_dir = PathBuf::from(".data");
+
+    if !data_dir.exists() {
+        std::fs::create_dir_all(&data_dir)?;
+    }
+
+    let file_path = data_dir.join(&hash_url(&url));
 
     let content = match read_file(&file_path)? {
         Some(content) => {

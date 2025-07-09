@@ -19,7 +19,13 @@ pub trait Downloader {
 
     async fn download(&self, term: &Term) -> anyhow::Result<Vec<u8>> {
         let url = self.url();
-        let file_path = PathBuf::from(".data").join(&hash_url(&url));
+        let data_dir = PathBuf::from(".data");
+
+        if !data_dir.exists() {
+            std::fs::create_dir_all(&data_dir)?;
+        }
+
+        let file_path = &data_dir.join(&hash_url(&url));
 
         let content = match read_file(&file_path)? {
             Some(content) => {

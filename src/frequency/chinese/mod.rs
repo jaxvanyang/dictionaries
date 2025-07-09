@@ -14,7 +14,12 @@ pub struct ChineseFrequencyMap {
 #[async_trait::async_trait(?Send)]
 impl<'a, 'b> FrequencyMapImpl<'a, 'b> for ChineseFrequencyMap {
     async fn new(_language: &'a str, term: &'b Term) -> anyhow::Result<Option<Self>> {
-        let mut ranks = super::ost::get_subtitle_frequencies("zh_CN", term).await?;
+        let simplified = super::ost::get_subtitle_frequencies("zh_CN", term).await?;
+        let traditional = super::ost::get_subtitle_frequencies("zh_TW", term).await?;
+
+        let mut ranks = traditional;
+
+        ranks.extend(simplified);
 
         ranks = map_to_ranks(&ranks);
 

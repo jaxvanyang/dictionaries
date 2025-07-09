@@ -16,7 +16,7 @@ struct HskWord {
 
 async fn get_hsk_level_data(level: u8, term: &Term) -> anyhow::Result<Vec<HskWord>> {
     let url = format!(
-        "https://raw.githubusercontent.com/TheOpenDictionary/complete-hsk-vocabulary/refs/heads/main/wordlists/inclusive/new/{}.min.json",
+        "https://raw.githubusercontent.com/TheOpenDictionary/complete-hsk-vocabulary/refs/heads/main/wordlists/exclusive/new/{}.min.json",
         level
     );
 
