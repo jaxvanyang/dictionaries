@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use console::Term;
-use odict::DictionaryWriter;
+use odict::io::DictionaryWriterOptions;
+use odict::{CompressOptions, DictionaryWriter};
 use sha2::{Digest, Sha256};
 
 use crate::progress::STYLE_DOWNLOAD;
@@ -29,7 +30,13 @@ pub fn save_dictionary(
     spinner.set_message("Writing the dictionary to file (this might take a while)...");
 
     let t0 = Instant::now();
-    writer.write_to_path(&dictionary, &output_path).unwrap();
+
+    let compress_options = CompressOptions::default().quality(8).window_size(22);
+    let writer_options = DictionaryWriterOptions::default().compression(compress_options);
+    writer
+        .write_to_path_with_opts(&dictionary, &output_path, writer_options)
+        .unwrap();
+
     let dt = t0.elapsed().as_secs_f32();
 
     spinner.finish_and_clear();
