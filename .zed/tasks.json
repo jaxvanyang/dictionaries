@@ -1,0 +1,7 @@
+[
+	{
+		"label": "Build",
+		"command": "just",
+		"env": { "RUST_BACKTRACE": "full" }
+	}
+]
