@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use console::Term;
 use odict::DictionaryWriter;
@@ -28,13 +28,15 @@ pub fn save_dictionary(
     spinner.enable_steady_tick(Duration::from_millis(100));
     spinner.set_message("Writing the dictionary to file (this might take a while)...");
 
+    let t0 = Instant::now();
     writer.write_to_path(&dictionary, &output_path).unwrap();
+    let dt = t0.elapsed().as_secs_f32();
 
     spinner.finish_and_clear();
 
     term.clear_last_lines(1).unwrap();
     term.write_line(&format!(
-        "✅ Dictionary written to {}",
+        "✅ Dictionary written to {} in {dt:.2}s",
         output_path.display()
     ))
     .unwrap();
