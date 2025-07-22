@@ -1,8 +1,8 @@
-default: (run "wiktionary" "eng")
 
-# Run a specific conversion
-run generator lang:
-	cargo run --release -- {{generator}} {{lang}}
+default: (run "cedict") (run "wiktionary" "eng")
+
+run *args:
+	cargo run --release -- {{args}}
 
 build:
 	cargo build --release
