@@ -1,0 +1,33 @@
+name: Build
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache data
+        id: cache-data
+        uses: actions/cache@v4
+        with:
+          path: .data
+          key: data
+      - uses: extractions/setup-just@v2
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: |
+          just
+          just prefix="$PWD/install" install
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mydicts
+          path: install/share/mydict/*.odict
